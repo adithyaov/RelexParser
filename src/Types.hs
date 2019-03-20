@@ -1,20 +1,18 @@
 module Types where
 
-import Data.Text (Text)
-
 data Program = Program
-  { name :: Text
-  , timeSlot :: Text
-  }
+  { name :: String
+  , timeSlot :: String
+  } deriving (Show)
 
 data Channel = Channel
-  { channel :: Text
+  { channel :: String
   , programming :: [Program]
-  }
+  } deriving (Show)
 
 data Day = Day
-  { day :: Text
+  { day :: String
   , channels :: [Channel]
-  }
+  } deriving (Show)
 
-newtype Week = Week [Day]
+newtype Week = Week [Day] deriving (Show)

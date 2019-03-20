@@ -1,32 +1,27 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Parsers where
 
-import Control.Applicative hiding ((<?>))
-import Control.Monad
-import Data.Attoparsec.Text
-import Data.Functor
-import Data.Monoid ((<>))
-import Data.Text (Text)
-import qualified Data.Text as T
-import System.Environment
 import Types
+import Control.Applicative hiding ((<|>),many)
+import Control.Monad
+import Text.Parsec
+import Text.Parsec.String
 
-html t p = string ("<" <> t <> ">") *> p <* string ("</" <> t <> ">")
+-- Ignore all the attributes
+html t = between (string ("<" ++ t) *> many (noneOf ">") *> char '>') (spaces *> string ("</" ++ t ++ ">"))
 
-htmlText t = html t $ takeTill (/= '<')
-
-spaces = many' space
+htmlText :: String -> Parser String
+htmlText t = html t $ many $ noneOf "<"
 
 -- Parsing Program
 -- <div><span>02:00</span><span>Yle uutiset</span></div>
 -- (or)
 -- <div><span>02:00</span><span><em>Yle uutiset</em></span></div>
-programParser = do
-  string "<div>"
+programParser = html "div" $ do
   t <- htmlText "span"
-  n <- html "span" (htmlText "em") <|> htmlText "span"
-  string "</div>"
+  n <- try (html "span" (htmlText "em")) <|> htmlText "span"
   return $ Program n t
 
 -- Parsing Channel
@@ -35,12 +30,10 @@ programParser = do
 --   <div><span>02:00</span><span>Yle uutiset</span></div>
 --   <div><span>03:00</span><span>Yle uutiset</span></div>
 -- </div>
-channelParser = do
-  -- One can also extract the id
-  string "<div id=\"" *> takeTill (/= '"') <* string "\">"
+channelParser = html "div" $ do
+  -- One can also extract the id if required
   c <- spaces *> htmlText "h3"
-  ps <- many' (spaces *> programParser)
-  spaces *> string "</div>"
+  ps <- many (try $ spaces *> programParser)
   return $ Channel c ps
 
 -- Parsing Day
@@ -50,11 +43,9 @@ channelParser = do
 --     ...
 --   </div>
 -- </div>
-dayParser = do
-  string "<div class=\"day\" id=\"" *> takeTill (/= '"') <* string "\">"
+dayParser = html "div" $ do
   d <- spaces *> htmlText "h2"
-  cs <- many' (spaces *> channelParser)
-  spaces *> string "</div>"
+  cs <- many (try $ spaces *> channelParser)
   return $ Day d cs
 
 -- Parsing Week
@@ -63,10 +54,7 @@ dayParser = do
 --     ...
 --   </div>
 -- </div>
-weekParser = do
-  string "<div id=\"content\">"
-  ds <- many' (spaces *> dayParser)
-  return $ Week ds
+weekParser = html "div" $ Week <$> many (try $ spaces *> dayParser)
 
 -- Parsing Everything else
 -- <html>
@@ -78,7 +66,9 @@ weekParser = do
 --     </div>
 --   </body>
 -- </html>
-mainParser =
-  html "html" $ do
-    spaces *> html "head" spaces
-    spaces *> html "body" (spaces *> weekParser)
+mainParser = parseHtml <* (spaces *> eof)
+  where
+    parseHtml = html "html" $ do
+      spaces *> html "head" spaces
+      spaces *> html "body" (spaces *> weekParser)
+
