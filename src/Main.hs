@@ -4,13 +4,18 @@ module Main where
 
 import Parsers
 import Text.Parsec
+import Data.Aeson (encode)
+import Data.ByteString.Lazy.Char8 (unpack)
 
 main :: IO ()
-main = putStrLn "Hello, Haskell!"
+main = print "Hello Haskell"
 
-parseFromFile fname = do
-  input <- readFile fname
-  print $ runParser mainParser () fname input
+saveToJson rFrom sTo = do
+  input <- readFile rFrom
+  case parse mainParser rFrom input of
+    Left err  -> print err
+    Right w -> writeFile sTo $ unpack . encode $ w
+
 
 -- Below are some examples for REPL testing
 
