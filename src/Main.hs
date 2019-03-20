@@ -13,7 +13,7 @@ main = do
   args <- getArgs
   case args of
     x:y:xs -> saveToJson x y
-    _ -> print "Insufficient args. Min 2 args requires, from (.html) and to (.json)"
+    _ -> print "Insufficient args. Min 2 args required, from (.html) and to (.json)"
 
 saveToJson rFrom sTo = do
   input <- readFile rFrom
