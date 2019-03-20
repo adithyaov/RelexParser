@@ -2,13 +2,18 @@
 
 module Main where
 
+import System.Environment
 import Parsers
 import Text.Parsec
 import Data.Aeson (encode)
 import Data.ByteString.Lazy.Char8 (unpack)
 
 main :: IO ()
-main = print "Hello Haskell"
+main = do
+  args <- getArgs
+  case args of
+    x:y:xs -> saveToJson x y
+    _ -> print "Insufficient args. Min 2 args requires, from (.html) and to (.json)"
 
 saveToJson rFrom sTo = do
   input <- readFile rFrom
